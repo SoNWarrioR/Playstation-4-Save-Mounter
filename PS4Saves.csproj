@@ -42,6 +42,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Form\UnmountAll\UnmountAllTypeDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form\UnmountAll\UnmountAllTypeDialog.Designer.cs">
+      <DependentUpon>UnmountAllTypeDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="functions.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>

@@ -1,4 +1,7 @@
-﻿namespace PS4Saves
+﻿using System.Reflection;
+using System.Windows.Forms;
+
+namespace PS4Saves
 {
     partial class Main
     {
@@ -37,6 +40,7 @@
             this.searchButton = new System.Windows.Forms.Button();
             this.mountButton = new System.Windows.Forms.Button();
             this.unmountButton = new System.Windows.Forms.Button();
+            this.unmountAllButton = new System.Windows.Forms.Button();
             this.connectionGroupBox = new System.Windows.Forms.GroupBox();
             this.getGamesButton = new System.Windows.Forms.Button();
             this.gamesComboBox = new System.Windows.Forms.ComboBox();
@@ -104,25 +108,39 @@
             this.userComboBox.TabIndex = 4;
             this.userComboBox.SelectedIndexChanged += new System.EventHandler(this.userComboBox_SelectedIndexChanged);
             // 
-            // dirsComboBox
+            // mountGroupBox
             // 
-            this.dirsComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.dirsComboBox.FormattingEnabled = true;
-            this.dirsComboBox.Location = new System.Drawing.Point(193, 19);
-            this.dirsComboBox.Name = "dirsComboBox";
-            this.dirsComboBox.Size = new System.Drawing.Size(180, 21);
-            this.dirsComboBox.TabIndex = 1;
-            this.dirsComboBox.SelectedIndexChanged += new System.EventHandler(this.dirsComboBox_SelectedIndexChanged);
+            this.mountGroupBox.Controls.Add(this.searchButton);
+            this.mountGroupBox.Controls.Add(this.dirsComboBox);
+            this.mountGroupBox.Controls.Add(this.mountButton);
+            this.mountGroupBox.Controls.Add(this.unmountButton);
+            this.mountGroupBox.Controls.Add(this.unmountAllButton);
+            this.mountGroupBox.Location = new System.Drawing.Point(7, 123);
+            this.mountGroupBox.Name = "mountGroupBox";
+            this.mountGroupBox.Size = new System.Drawing.Size(379, 108);
+            this.mountGroupBox.TabIndex = 1;
+            this.mountGroupBox.TabStop = false;
+            this.mountGroupBox.Text = "Mount Existing Saves";
             // 
             // searchButton
             // 
             this.searchButton.Location = new System.Drawing.Point(6, 19);
             this.searchButton.Name = "searchButton";
-            this.searchButton.Size = new System.Drawing.Size(181, 21);
+            this.searchButton.Size = new System.Drawing.Size(181, 23);
             this.searchButton.TabIndex = 0;
             this.searchButton.Text = "Search";
             this.searchButton.UseVisualStyleBackColor = true;
             this.searchButton.Click += new System.EventHandler(this.searchButton_Click);
+            // 
+            // dirsComboBox
+            // 
+            this.dirsComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.dirsComboBox.FormattingEnabled = true;
+            this.dirsComboBox.Location = new System.Drawing.Point(193, 20);
+            this.dirsComboBox.Name = "dirsComboBox";
+            this.dirsComboBox.Size = new System.Drawing.Size(179, 21);
+            this.dirsComboBox.TabIndex = 1;
+            this.dirsComboBox.SelectedIndexChanged += new System.EventHandler(this.dirsComboBox_SelectedIndexChanged);
             // 
             // mountButton
             // 
@@ -143,6 +161,16 @@
             this.unmountButton.Text = "Unmount";
             this.unmountButton.UseVisualStyleBackColor = true;
             this.unmountButton.Click += new System.EventHandler(this.unmountButton_Click);
+            //
+            // unmountAll
+            //
+            this.unmountAllButton.Location = new System.Drawing.Point(5, 77);
+            this.unmountAllButton.Name = "unmountAllButton";
+            this.unmountAllButton.Size = new System.Drawing.Size(367, 23);
+            this.unmountAllButton.TabIndex = 4;
+            this.unmountAllButton.Text = "Unmount all";
+            this.unmountAllButton.UseVisualStyleBackColor = true;
+            this.unmountAllButton.Click += new System.EventHandler(this.unmountAllButton_Click);
             // 
             // connectionGroupBox
             // 
@@ -207,7 +235,7 @@
             this.createGroupBox.Controls.Add(this.nameLabel);
             this.createGroupBox.Controls.Add(this.nameTextBox);
             this.createGroupBox.Controls.Add(this.createButton);
-            this.createGroupBox.Location = new System.Drawing.Point(7, 210);
+            this.createGroupBox.Location = new System.Drawing.Point(7, 232);
             this.createGroupBox.Name = "createGroupBox";
             this.createGroupBox.Size = new System.Drawing.Size(379, 129);
             this.createGroupBox.TabIndex = 2;
@@ -260,19 +288,6 @@
             this.createButton.Text = "Create Save";
             this.createButton.UseVisualStyleBackColor = true;
             this.createButton.Click += new System.EventHandler(this.createButton_Click);
-            // 
-            // mountGroupBox
-            // 
-            this.mountGroupBox.Controls.Add(this.searchButton);
-            this.mountGroupBox.Controls.Add(this.dirsComboBox);
-            this.mountGroupBox.Controls.Add(this.mountButton);
-            this.mountGroupBox.Controls.Add(this.unmountButton);
-            this.mountGroupBox.Location = new System.Drawing.Point(7, 123);
-            this.mountGroupBox.Name = "mountGroupBox";
-            this.mountGroupBox.Size = new System.Drawing.Size(379, 81);
-            this.mountGroupBox.TabIndex = 1;
-            this.mountGroupBox.TabStop = false;
-            this.mountGroupBox.Text = "Mount Existing Saves";
             // 
             // infoGroupBox
             // 
@@ -365,7 +380,7 @@
             // statusLabel
             // 
             this.statusLabel.AutoSize = true;
-            this.statusLabel.Location = new System.Drawing.Point(4, 342);
+            this.statusLabel.Location = new System.Drawing.Point(4, 365);
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(40, 13);
             this.statusLabel.TabIndex = 13;
@@ -375,14 +390,15 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(797, 362);
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.ClientSize = new System.Drawing.Size(797, 380);
             this.Controls.Add(this.statusLabel);
             this.Controls.Add(this.infoGroupBox);
             this.Controls.Add(this.mountGroupBox);
             this.Controls.Add(this.createGroupBox);
             this.Controls.Add(this.connectionGroupBox);
             this.Name = "Main";
-            this.Text = "Playstation 4 Save Mounter 1.5 [ps4debug]";
+            this.Text = $"Playstation 4 Save Mounter {typeof(Main).Assembly.GetName().Version} [ps4debug]";
             this.connectionGroupBox.ResumeLayout(false);
             this.connectionGroupBox.PerformLayout();
             this.createGroupBox.ResumeLayout(false);
@@ -393,7 +409,6 @@
             this.infoGroupBox.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
@@ -406,6 +421,7 @@
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button mountButton;
         private System.Windows.Forms.Button unmountButton;
+        private System.Windows.Forms.Button unmountAllButton;
         private System.Windows.Forms.GroupBox connectionGroupBox;
         private System.Windows.Forms.Label ipLabel;
         private System.Windows.Forms.GroupBox createGroupBox;
