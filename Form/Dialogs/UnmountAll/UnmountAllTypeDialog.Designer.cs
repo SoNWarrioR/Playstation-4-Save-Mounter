@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Windows.Forms;
 
-namespace PS4Saves.Form.UnmountAll
+namespace PS4Saves.Form.Dialogs.UnmountAll
 {
     partial class UnmountAllTypeDialog
     {

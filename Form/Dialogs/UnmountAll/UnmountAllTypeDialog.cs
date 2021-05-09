@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PS4Saves.Form.UnmountAll
+namespace PS4Saves.Form.Dialogs.UnmountAll
 {
     public partial class UnmountAllTypeDialog : System.Windows.Forms.Form
     {

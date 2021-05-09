@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
+using PS4Saves.Form.ComboBox;
 
 namespace PS4Saves
 {
@@ -36,7 +38,7 @@ namespace PS4Saves
             this.connectButton = new System.Windows.Forms.Button();
             this.setupButton = new System.Windows.Forms.Button();
             this.userComboBox = new System.Windows.Forms.ComboBox();
-            this.dirsComboBox = new System.Windows.Forms.ComboBox();
+            this.dirsComboBox = new FlatComboBox();
             this.searchButton = new System.Windows.Forms.Button();
             this.mountButton = new System.Windows.Forms.Button();
             this.unmountButton = new System.Windows.Forms.Button();
@@ -138,6 +140,7 @@ namespace PS4Saves
             this.dirsComboBox.FormattingEnabled = true;
             this.dirsComboBox.Location = new System.Drawing.Point(193, 20);
             this.dirsComboBox.Name = "dirsComboBox";
+            this.dirsComboBox.BorderColor = Color.LightGray;
             this.dirsComboBox.Size = new System.Drawing.Size(179, 21);
             this.dirsComboBox.TabIndex = 1;
             this.dirsComboBox.SelectedIndexChanged += new System.EventHandler(this.dirsComboBox_SelectedIndexChanged);
@@ -417,7 +420,7 @@ namespace PS4Saves
         private System.Windows.Forms.Button connectButton;
         private System.Windows.Forms.Button setupButton;
         private System.Windows.Forms.ComboBox userComboBox;
-        private System.Windows.Forms.ComboBox dirsComboBox;
+        private FlatComboBox dirsComboBox;
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button mountButton;
         private System.Windows.Forms.Button unmountButton;

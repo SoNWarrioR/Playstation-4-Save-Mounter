@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using PS4Saves.Form.UnmountAll;
+using PS4Saves.Form.Dialogs.UnmountAll;
 
 namespace PS4Saves
 {
@@ -350,6 +350,8 @@ namespace PS4Saves
                     MountPoint = mountPointLocation
                 });
                 
+                dirsComboBox.BorderColor = Color.LimeGreen;
+                
                 WriteLog($"Current Mount Point list: {currentMountPointList}");
                 SetStatus($"Save Mounted in {mountPointLocation}");
             }
@@ -387,6 +389,7 @@ namespace PS4Saves
             };
 
             Unmount(mountPoint);
+            dirsComboBox.BorderColor = Color.LightGray;
             currentMountPointList.Remove(currentSaveDirectory);
             SetStatus("Save Unmounted");
         }
@@ -448,6 +451,7 @@ namespace PS4Saves
                 Unmount(mountPoint);
             }
             
+            dirsComboBox.BorderColor = Color.LightGray;
             SetStatus("All save unmounted");
         }
 
@@ -477,11 +481,17 @@ namespace PS4Saves
                 return;
             }
 
-            foreach (var currentMountPoint in currentMountPointList)
+            foreach (var currentMountPoint in currentMountPointList.Values)
             {
-                
+                SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
+                {
+                    data = ((MountPointStruct)currentMountPoint).MountPoint,
+                };
+
+                Unmount(mountPoint);
             }
             
+            dirsComboBox.BorderColor = Color.LightGray;
             SetStatus("All save unmounted");
         }
 
@@ -664,10 +674,15 @@ namespace PS4Saves
 
         private void dirsComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            dirsComboBox.BorderColor = Color.LightGray;
             titleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).title;
             subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).subtitle;
             detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).detail;
             dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).time;
+            if (currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).dirName))
+            {
+                dirsComboBox.BorderColor = Color.LimeGreen;
+            }
         }
         
         private void userComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -751,7 +766,7 @@ namespace PS4Saves
                     var buffer = new byte[stream.Length];
                     stream.Read(buffer, 0, buffer.Length);
                     var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    IAsyncResult result = socket.BeginConnect(new IPEndPoint(IPAddress.Parse(ipTextBox.Text), 9020), null, null);
+                    IAsyncResult result = socket.BeginConnect(new IPEndPoint(IPAddress.Parse(ipTextBox.Text), 9021), null, null);
                     var connected = result.AsyncWaitHandle.WaitOne(3000);
                     if (connected)
                     {

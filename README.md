@@ -1,4 +1,4 @@
-# Playstation 4 Save Mounter 1.5
+# Playstation 4 Save Mounter 1.6
 
 ## Summary
 This program allows you to mount save data with RW permission and a lot more shit, just read this damn thing
@@ -10,14 +10,14 @@ This program allows you to mount save data with RW permission and a lot more shi
 * Export saves to 5.05+ consoles
 
 ### You can't
-* Replace save files with an encrypted save (if it's encrypted with keys > 5.05)
+* Replace save files with an encrypted save (if it's encrypted with keys > 6.72)
 * Use this on unexploited consoles
 
 ### You need
 * To make sure you're using a recent ps4debug version, bin of the latest ps4debug (as of 11/14) is included in the download
 * To be able to run .net framework 2.0 executables (even windows 98 can run this)
 ## Prerequisites
-* PS4 5.05
+* PS4 6.72
 * FTP Client (eg filezilla, ...)
 ## Instructions
 

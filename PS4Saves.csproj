@@ -42,10 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Form\UnmountAll\UnmountAllTypeDialog.cs">
+    <Compile Include="Form\ComboBox\FlatComboBox.cs" />
+    <Compile Include="Form\Dialogs\UnmountAll\UnmountAllTypeDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\UnmountAll\UnmountAllTypeDialog.Designer.cs">
+    <Compile Include="Form\Dialogs\UnmountAll\UnmountAllTypeDialog.Designer.cs">
       <DependentUpon>UnmountAllTypeDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="functions.cs" />
@@ -69,6 +70,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ps4debug.bin" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Form\Buttons" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
