@@ -18,12 +18,12 @@ namespace PS4Saves.Form.UnmountAll
 
         public void tryDirtyUnmount(object sender, EventArgs e)
         {
-            this.mainForm?.tryDirtyUnmount();
+            this.mainForm?.TryDirtyUnmount();
         }
 
         public void tryUnmountExists(object sender, EventArgs e)
         {
-            this.mainForm?.tryUnmountExists();
+            this.mainForm?.TryUnmountExists();
         }
 
     }

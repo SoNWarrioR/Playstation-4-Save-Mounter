@@ -417,7 +417,7 @@ namespace PS4Saves
             unmountTypeDialog.Show();
         }
 
-        public void tryDirtyUnmount()
+        public void TryDirtyUnmount()
         {
             if (!ps4.IsConnected)
             {
@@ -451,7 +451,7 @@ namespace PS4Saves
             SetStatus("All save unmounted");
         }
 
-        public void tryUnmountExists()
+        public void TryUnmountExists()
         {
             if (!ps4.IsConnected)
             {
