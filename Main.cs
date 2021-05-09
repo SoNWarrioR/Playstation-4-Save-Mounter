@@ -1,18 +1,25 @@
 ﻿using libdebug;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows.Forms;
+using PS4Saves.Form.Dialogs.UnmountAll;
 
 namespace PS4Saves
 {
-    public partial class Main : Form
+    public partial class Main : System.Windows.Forms.Form
     {
+        class MountPointStruct
+        {
+            public object Directory { get; set; }
+            public string Title { get; set; }
+            public string MountPoint { get; set; }
+        }
+
         PS4DBG ps4 = new PS4DBG();
         private int pid;
         private ulong stub;
@@ -24,11 +31,14 @@ namespace PS4Saves
         private ulong GetUsersAddr = 0;
         private int user = 0x0;
         private string selectedGame = null;
-        string mp = "";
+        private Dictionary<string, object> currentMountPointList;
+
         bool log = false;
         
         public Main()
         {
+            this.currentMountPointList = new Dictionary<string, object>();
+            
             InitializeComponent();
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length == 2 && args[1] == "-log")
@@ -328,12 +338,22 @@ namespace PS4Saves
 
             };
             ps4.WriteMemory(pid, dirNameAddr, dirName);
-            mp = Mount(mount, mountResult);
-
+            var mountPointLocation = Mount(mount, mountResult);
+            
             ps4.FreeMemory(pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
-            if (mp != "")
+            if (mountPointLocation != "")
             {
-                SetStatus($"Save Mounted in {mp}");
+                currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).dirName, new MountPointStruct()
+                {
+                    Directory = dirsComboBox.SelectedItem,
+                    Title = selectedGame,
+                    MountPoint = mountPointLocation
+                });
+                
+                dirsComboBox.BorderColor = Color.LimeGreen;
+                
+                WriteLog($"Current Mount Point list: {currentMountPointList}");
+                SetStatus($"Save Mounted in {mountPointLocation}");
             }
             else
             {
@@ -348,19 +368,131 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
-            if (mp == "")
+            if (currentMountPointList.Count == 0)
             {
                 SetStatus("No save mounted");
                 return;
             }
+
+            var currentSaveDirectory = ((SearchEntry) dirsComboBox.SelectedItem).dirName;
+
+            if (!currentMountPointList.ContainsKey(currentSaveDirectory))
+            {
+                SetStatus("Current selected save not mounted");
+                return;
+            }
+
+            currentMountPointList.TryGetValue(currentSaveDirectory, out var currentMountPoint);
             SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
             {
-                data = mp,
+                data = ((MountPointStruct)currentMountPoint).MountPoint,
             };
 
             Unmount(mountPoint);
-            mp = null;
+            dirsComboBox.BorderColor = Color.LightGray;
+            currentMountPointList.Remove(currentSaveDirectory);
             SetStatus("Save Unmounted");
+        }
+
+        private void unmountAllButton_Click(object sender, EventArgs e)
+        {
+            if (!ps4.IsConnected)
+            {
+                SetStatus("Not connected to ps4");
+                return;
+            }
+            
+            if (dirsComboBox.Items.Count == 0)
+            {
+                SetStatus("No save selected");
+                return;
+            }
+            
+            if (selectedGame == null)
+            {
+                SetStatus("No game selected");
+                return;
+            }
+            
+            UnmountAllTypeDialog unmountTypeDialog = new UnmountAllTypeDialog(this);
+            unmountTypeDialog.TopMost = true;
+            unmountTypeDialog.StartPosition = FormStartPosition.CenterParent;
+            unmountTypeDialog.Show();
+        }
+
+        public void TryDirtyUnmount()
+        {
+            if (!ps4.IsConnected)
+            {
+                SetStatus("Not connected to ps4");
+                return;
+            }
+            
+            if (dirsComboBox.Items.Count == 0)
+            {
+                SetStatus("No save selected");
+                return;
+            }
+            
+            if (selectedGame == null)
+            {
+                SetStatus("No game selected");
+                return;
+            }
+            
+            for (var i = 0; i < 18; i++)
+            {
+                
+                SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
+                {
+                    data = $"/savedata{i}",
+                };
+
+                Unmount(mountPoint);
+            }
+            
+            dirsComboBox.BorderColor = Color.LightGray;
+            SetStatus("All save unmounted");
+        }
+
+        public void TryUnmountExists()
+        {
+            if (!ps4.IsConnected)
+            {
+                SetStatus("Not connected to ps4");
+                return;
+            }
+            
+            if (dirsComboBox.Items.Count == 0)
+            {
+                SetStatus("No save selected");
+                return;
+            }
+            
+            if (selectedGame == null)
+            {
+                SetStatus("No game selected");
+                return;
+            }
+
+            if (currentMountPointList.Count == 0)
+            {
+                SetStatus("No have mounted save on this session");
+                return;
+            }
+
+            foreach (var currentMountPoint in currentMountPointList.Values)
+            {
+                SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
+                {
+                    data = ((MountPointStruct)currentMountPoint).MountPoint,
+                };
+
+                Unmount(mountPoint);
+            }
+            
+            dirsComboBox.BorderColor = Color.LightGray;
+            SetStatus("All save unmounted");
         }
 
         private void createButton_Click(object sender, EventArgs e)
@@ -445,10 +577,11 @@ namespace PS4Saves
 
         private int InitialUser()
         {
-            var bufferAddr = ps4.AllocateMemory(pid, sizeof(int));
+            var bufferAddrObject = ps4.AllocateMemory(pid, sizeof(int)) as object;
 
-            ps4.Call(pid, stub, libSceUserServiceBase + offsets.sceUserServiceGetInitialUser, bufferAddr);
+            ps4.Call(pid, stub, libSceUserServiceBase + offsets.sceUserServiceGetInitialUser, bufferAddrObject);
 
+            var bufferAddr = (ulong) bufferAddrObject;
             var id = ps4.ReadMemory<int>(pid, bufferAddr);
 
             ps4.FreeMemory(pid, bufferAddr, sizeof(int));
@@ -501,7 +634,6 @@ namespace PS4Saves
             var ret = ps4.Call(pid, stub, libSceSaveDataBase + offsets.sceSaveDataUmount, mountPointAddr);
             WriteLog($"sceSaveDataUmount ret = 0x{ret:X}");
             ps4.FreeMemory(pid, mountPointAddr, Marshal.SizeOf(typeof(SceSaveDataMountPoint)));
-            mp = null;
         }
 
         private string Mount(SceSaveDataMount mount, SceSaveDataMountResult mountResult)
@@ -542,10 +674,15 @@ namespace PS4Saves
 
         private void dirsComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            dirsComboBox.BorderColor = Color.LightGray;
             titleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).title;
             subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).subtitle;
             detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).detail;
             dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).time;
+            if (currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).dirName))
+            {
+                dirsComboBox.BorderColor = Color.LimeGreen;
+            }
         }
         
         private void userComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -629,7 +766,7 @@ namespace PS4Saves
                     var buffer = new byte[stream.Length];
                     stream.Read(buffer, 0, buffer.Length);
                     var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    IAsyncResult result = socket.BeginConnect(new IPEndPoint(IPAddress.Parse(ipTextBox.Text), 9020), null, null);
+                    IAsyncResult result = socket.BeginConnect(new IPEndPoint(IPAddress.Parse(ipTextBox.Text), 9021), null, null);
                     var connected = result.AsyncWaitHandle.WaitOne(3000);
                     if (connected)
                     {
