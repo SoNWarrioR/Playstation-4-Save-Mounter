@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>PS4Saves</RootNamespace>
     <AssemblyName>Playstation 4 Save Mounter</AssemblyName>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -21,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>7.1</LangVersion>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -49,7 +49,7 @@
     <Compile Include="Form\Dialogs\UnmountAll\UnmountAllTypeDialog.Designer.cs">
       <DependentUpon>UnmountAllTypeDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="functions.cs" />
+    <Compile Include="Functions.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -33,14 +33,19 @@ namespace PS4Saves.Form.Dialogs.UnmountAll
         
         private System.Windows.Forms.Button dirtyUnmount;
         private System.Windows.Forms.Button unmountExists;
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
         private void InitializeComponent()
         {
             this.dirtyUnmount = new System.Windows.Forms.Button();
             this.unmountExists = new System.Windows.Forms.Button();
-
-
-            #region dryUnmount Button
-
+            this.SuspendLayout();
+            // 
+            // dirtyUnmount
+            // 
             this.dirtyUnmount.Location = new System.Drawing.Point(5, 5);
             this.dirtyUnmount.Name = "dirtyUnmount";
             this.dirtyUnmount.Size = new System.Drawing.Size(181, 25);
@@ -48,11 +53,9 @@ namespace PS4Saves.Form.Dialogs.UnmountAll
             this.dirtyUnmount.Text = "Dry Unmount all";
             this.dirtyUnmount.UseVisualStyleBackColor = true;
             this.dirtyUnmount.Click += new System.EventHandler(this.tryDirtyUnmount);
-
-            #endregion
-            
-            #region tryUnmountExists Button
-
+            // 
+            // unmountExists
+            // 
             this.unmountExists.Location = new System.Drawing.Point(5, 30);
             this.unmountExists.Name = "unmountExists";
             this.unmountExists.Size = new System.Drawing.Size(181, 25);
@@ -60,25 +63,21 @@ namespace PS4Saves.Form.Dialogs.UnmountAll
             this.unmountExists.Text = "Unmount all exists";
             this.unmountExists.UseVisualStyleBackColor = true;
             this.unmountExists.Click += new System.EventHandler(this.tryUnmountExists);
-
-            #endregion
-            
-            this.components = new System.ComponentModel.Container();
+            // 
+            // UnmountAllTypeDialog
+            // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
             this.ClientSize = new System.Drawing.Size(190, 60);
-            this.Text = "Select unmount type";
-            this.Name = "UnmountAllTypeDialog";
-
-            #region Controls
-
             this.Controls.Add(this.dirtyUnmount);
             this.Controls.Add(this.unmountExists);
-            
-            #endregion
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "UnmountAllTypeDialog";
+            this.Text = "Unmount type";
+            this.TopMost = true;
+            this.ResumeLayout(false);
         }
 
         #endregion

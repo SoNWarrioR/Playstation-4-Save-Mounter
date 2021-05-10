@@ -1,6 +1,8 @@
-﻿namespace PS4Saves
+﻿using System.Net;
+
+namespace PS4Saves
 {
-    internal static class functions
+    internal static class Functions
     {
         internal static byte[] GetSaveDirectories =
         {
@@ -40,5 +42,10 @@
             0x48, 0x89, 0xCF, 0xFF, 0xD0, 0x83, 0x45, 0xFC, 0x01, 0x83, 0x45, 0xF8, 0x01, 0xE9, 0x56, 0xFF, 0xFF, 0xFF,
             0x8B, 0x45, 0xFC, 0xC9, 0xC3
         };
+        
+        internal static bool CheckIp(string ip)
+        {
+            return !string.IsNullOrEmpty(ip) && IPAddress.TryParse(ip, out _);
+        }
     }
 }

@@ -21,25 +21,24 @@ namespace PS4Saves
         }
 
         PS4DBG ps4 = new PS4DBG();
-        private int pid;
-        private ulong stub;
-        private ulong libSceUserServiceBase = 0x0;
-        private ulong libSceSaveDataBase = 0x0;
+        private int _pid;
+        private ulong _stub;
+        private ulong _libSceUserServiceBase = 0x0;
+        private ulong _libSceSaveDataBase = 0x0;
         private ulong executableBase = 0x0;
-        private ulong libSceLibcInternalBase = 0x0;
-        private ulong GetSaveDirectoriesAddr = 0;
-        private ulong GetUsersAddr = 0;
-        private int user = 0x0;
-        private string selectedGame = null;
-        private Dictionary<string, object> currentMountPointList;
+        private ulong _libSceLibcInternalBase = 0x0;
+        private ulong _getSaveDirectoriesAddr = 0;
+        private ulong _getUsersAddr = 0;
+        private int _user = 0x0;
+        private string _selectedGame = null;
+        private readonly Dictionary<string, object> _currentMountPointList;
 
         bool log = false;
         
         public Main()
         {
-            this.currentMountPointList = new Dictionary<string, object>();
-            
             InitializeComponent();
+            _currentMountPointList = new Dictionary<string, object>();
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length == 2 && args[1] == "-log")
             {
@@ -53,19 +52,19 @@ namespace PS4Saves
         }
         public static string FormatSize(double size)
         {
-            const long BytesInKilobytes = 1024;
-            const long BytesInMegabytes = BytesInKilobytes * 1024;
-            const long BytesInGigabytes = BytesInMegabytes * 1024;
+            const long bytesInKilobytes = 1024;
+            const long bytesInMegabytes = bytesInKilobytes * 1024;
+            const long bytesInGigabytes = bytesInMegabytes * 1024;
             double value;
             string str;
-            if (size < BytesInGigabytes)
+            if (size < bytesInGigabytes)
             {
-                value = size / BytesInMegabytes;
+                value = size / bytesInMegabytes;
                 str = "MB";
             }
             else
             {
-                value = size /BytesInGigabytes;
+                value = size / bytesInGigabytes;
                 str = "GB";
             }
             return String.Format("{0:0.##} {1}", value, str);
@@ -118,17 +117,19 @@ namespace PS4Saves
         {
             try
             {
-                if (!checkIP(ipTextBox.Text))
+                if (!Functions.CheckIp(ipTextBox.Text))
                 {
                     SetStatus("Invalid IP");
                     return;
                 }
+                
                 ps4 = new PS4DBG(ipTextBox.Text);
                 ps4.Connect();
                 if (!ps4.IsConnected)
                 {
                     throw new Exception();
                 }
+                
                 SetStatus("Connected");
                 if (!File.Exists("ip"))
                 {
@@ -155,6 +156,7 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             var pl = ps4.GetProcessList();
             var su = pl.FindProcess("SceShellUI");
             if (su == null)
@@ -162,52 +164,50 @@ namespace PS4Saves
                 SetStatus("Couldn't find SceShellUI");
                 return;
             }
-            pid = su.pid;
-            var pm = ps4.GetProcessMaps(pid);
+            
+            _pid = su.pid;
+            var pm = ps4.GetProcessMaps(_pid);
             var tmp = pm.FindEntry("libSceSaveData.sprx")?.start;
             if (tmp == null)
             {
                 MessageBox.Show("savedata lib not found", "Error");
                 return;
             }
-            libSceSaveDataBase = (ulong)tmp;
-
+            
+            _libSceSaveDataBase = (ulong)tmp;
             tmp = pm.FindEntry("libSceUserService.sprx")?.start;
             if (tmp == null)
             {
                 MessageBox.Show("user service lib not found", "Error");
                 return;
             }
-            libSceUserServiceBase = (ulong)tmp;
-
+            
+            _libSceUserServiceBase = (ulong)tmp;
             tmp = pm.FindEntry("executable")?.start;
             if (tmp == null)
             {
                 MessageBox.Show("executable not found", "Error");
                 return;
             }
+            
             executableBase = (ulong)tmp;
-
             tmp = pm.FindEntry("libSceLibcInternal.sprx")?.start;
             if (tmp == null)
             {
                 MessageBox.Show("libc not found", "Error");
                 return;
             }
-            libSceLibcInternalBase = (ulong)tmp;
-            stub = pm.FindEntry("(NoName)clienthandler") == null ? ps4.InstallRPC(pid) : pm.FindEntry("(NoName)clienthandler").start;
-
             
-
-            var ret = ps4.Call(pid, stub, libSceSaveDataBase + offsets.sceSaveDataInitialize3);
+            _libSceLibcInternalBase = (ulong)tmp;
+            _stub = pm.FindEntry("(NoName)clienthandler") == null ? ps4.InstallRPC(_pid) : pm.FindEntry("(NoName)clienthandler").start;
+            var ret = ps4.Call(_pid, _stub, _libSceSaveDataBase + offsets.sceSaveDataInitialize3);
             WriteLog($"sceSaveDataInitialize3 ret = 0x{ret:X}");
             
-           
             //PATCHES
             //SAVEDATA LIBRARY PATCHES
-            ps4.WriteMemory(pid, libSceSaveDataBase + 0x00038AE8, (byte)0x00); // 'sce_' patch
-            ps4.WriteMemory(pid, libSceSaveDataBase + 0x000377D9, (byte)0x00); // 'sce_sdmemory' patch
-            ps4.WriteMemory(pid, libSceSaveDataBase + 0x00000ED9, (byte)0x30); // '_' patch
+            ps4.WriteMemory(_pid, _libSceSaveDataBase + 0x00038AE8, (byte)0x00); // 'sce_' patch
+            ps4.WriteMemory(_pid, _libSceSaveDataBase + 0x000377D9, (byte)0x00); // 'sce_sdmemory' patch
+            ps4.WriteMemory(_pid, _libSceSaveDataBase + 0x00000ED9, (byte)0x30); // '_' patch
 
             var l = ps4.GetProcessList();
             var s = l.FindProcess("SceShellCore");
@@ -225,18 +225,18 @@ namespace PS4Saves
             ps4.WriteMemory(s.pid, ex.start + 0x00070054, new byte[] { 0x90, 0x90}); //nevah jump
             ps4.WriteMemory(s.pid, ex.start + 0x00070260, new byte[] { 0x90, 0xE9 }); //always jump
             //WRITE CUSTOM FUNCTIONS
-            GetSaveDirectoriesAddr = ps4.AllocateMemory(pid, 0x8000);
-            ps4.WriteMemory(pid, GetSaveDirectoriesAddr, functions.GetSaveDirectories);
-            ps4.WriteMemory(pid, GetSaveDirectoriesAddr + 0x12, libSceLibcInternalBase + 0x000B3F40); //opendir
-            ps4.WriteMemory(pid, GetSaveDirectoriesAddr + 0x20, libSceLibcInternalBase + 0x000B4CE0); //readdir
-            ps4.WriteMemory(pid, GetSaveDirectoriesAddr + 0x2E, libSceLibcInternalBase + 0x000B2D20);//closedir
-            ps4.WriteMemory(pid, GetSaveDirectoriesAddr + 0x3C, libSceLibcInternalBase + 0x000C0A40); //strcpy
+            _getSaveDirectoriesAddr = ps4.AllocateMemory(_pid, 0x8000);
+            ps4.WriteMemory(_pid, _getSaveDirectoriesAddr, Functions.GetSaveDirectories);
+            ps4.WriteMemory(_pid, _getSaveDirectoriesAddr + 0x12, _libSceLibcInternalBase + 0x000B3F40); //opendir
+            ps4.WriteMemory(_pid, _getSaveDirectoriesAddr + 0x20, _libSceLibcInternalBase + 0x000B4CE0); //readdir
+            ps4.WriteMemory(_pid, _getSaveDirectoriesAddr + 0x2E, _libSceLibcInternalBase + 0x000B2D20);//closedir
+            ps4.WriteMemory(_pid, _getSaveDirectoriesAddr + 0x3C, _libSceLibcInternalBase + 0x000C0A40); //strcpy
 
-            GetUsersAddr = GetSaveDirectoriesAddr + (uint)functions.GetSaveDirectories.Length + 0x20;
-            ps4.WriteMemory(pid, GetUsersAddr, functions.GetUsers);
-            ps4.WriteMemory(pid, GetUsersAddr + 0x15, libSceUserServiceBase + offsets.sceUserServiceGetLoginUserIdList);
-            ps4.WriteMemory(pid, GetUsersAddr + 0x23, libSceUserServiceBase + offsets.sceUserServiceGetUserName);
-            ps4.WriteMemory(pid, GetUsersAddr + 0x31, libSceLibcInternalBase + 0x000C0A40); //strcpy
+            _getUsersAddr = _getSaveDirectoriesAddr + (uint)Functions.GetSaveDirectories.Length + 0x20;
+            ps4.WriteMemory(_pid, _getUsersAddr, Functions.GetUsers);
+            ps4.WriteMemory(_pid, _getUsersAddr + 0x15, _libSceUserServiceBase + offsets.sceUserServiceGetLoginUserIdList);
+            ps4.WriteMemory(_pid, _getUsersAddr + 0x23, _libSceUserServiceBase + offsets.sceUserServiceGetUserName);
+            ps4.WriteMemory(_pid, _getUsersAddr + 0x31, _libSceLibcInternalBase + 0x000C0A40); //strcpy
 
 
             var users = GetUsers();
@@ -253,23 +253,23 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
-            if (pid == 0)
+            if (_pid == 0)
             {
                 SetStatus("dont forget to click setup");
                 return;
             }
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
-            var pm = ps4.GetProcessMaps(pid);
+            var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
                 SetStatus("RPC Stub Not Found");
                 return;
             }
-            var dirNameAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
+            var dirNameAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
             var titleIdAddr = dirNameAddr + (uint) Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024;
             var paramAddr = titleIdAddr + 0x10;
             SceSaveDataDirNameSearchCond searchCond = new SceSaveDataDirNameSearchCond
@@ -283,9 +283,9 @@ namespace PS4Saves
                 dirNamesNum = 1024,
                 param = paramAddr,
             };
-            ps4.WriteMemory(pid, titleIdAddr, selectedGame);
+            ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
             dirsComboBox.DataSource = Find(searchCond, searchResult);
-            ps4.FreeMemory(pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
+            ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
             if (dirsComboBox.Items.Count > 0)
             {
                 SetStatus($"Found {dirsComboBox.Items.Count} Save Directories :D");
@@ -308,16 +308,16 @@ namespace PS4Saves
                 SetStatus("No save selected");
                 return;
             }
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
-            var dirNameAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
+            var dirNameAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             var titleIdAddr = dirNameAddr + (uint)Marshal.SizeOf(typeof(SceSaveDataDirName));
             var fingerprintAddr = titleIdAddr + 0x10;
-            ps4.WriteMemory(pid, titleIdAddr, selectedGame);
-            ps4.WriteMemory(pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
+            ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
+            ps4.WriteMemory(_pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
             SceSaveDataDirName dirName = new SceSaveDataDirName
             {
                 data = dirsComboBox.Text
@@ -337,22 +337,22 @@ namespace PS4Saves
             {
 
             };
-            ps4.WriteMemory(pid, dirNameAddr, dirName);
+            ps4.WriteMemory(_pid, dirNameAddr, dirName);
             var mountPointLocation = Mount(mount, mountResult);
             
-            ps4.FreeMemory(pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
+            ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             if (mountPointLocation != "")
             {
-                currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).dirName, new MountPointStruct()
+                _currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).dirName, new MountPointStruct()
                 {
                     Directory = dirsComboBox.SelectedItem,
-                    Title = selectedGame,
+                    Title = _selectedGame,
                     MountPoint = mountPointLocation
                 });
                 
                 dirsComboBox.BorderColor = Color.LimeGreen;
                 
-                WriteLog($"Current Mount Point list: {currentMountPointList}");
+                WriteLog($"Current Mount Point list: {_currentMountPointList}");
                 SetStatus($"Save Mounted in {mountPointLocation}");
             }
             else
@@ -368,7 +368,7 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
-            if (currentMountPointList.Count == 0)
+            if (_currentMountPointList.Count == 0)
             {
                 SetStatus("No save mounted");
                 return;
@@ -376,13 +376,13 @@ namespace PS4Saves
 
             var currentSaveDirectory = ((SearchEntry) dirsComboBox.SelectedItem).dirName;
 
-            if (!currentMountPointList.ContainsKey(currentSaveDirectory))
+            if (!_currentMountPointList.ContainsKey(currentSaveDirectory))
             {
                 SetStatus("Current selected save not mounted");
                 return;
             }
 
-            currentMountPointList.TryGetValue(currentSaveDirectory, out var currentMountPoint);
+            _currentMountPointList.TryGetValue(currentSaveDirectory, out var currentMountPoint);
             SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
             {
                 data = ((MountPointStruct)currentMountPoint).MountPoint,
@@ -390,7 +390,7 @@ namespace PS4Saves
 
             Unmount(mountPoint);
             dirsComboBox.BorderColor = Color.LightGray;
-            currentMountPointList.Remove(currentSaveDirectory);
+            _currentMountPointList.Remove(currentSaveDirectory);
             SetStatus("Save Unmounted");
         }
 
@@ -408,7 +408,7 @@ namespace PS4Saves
                 return;
             }
             
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
@@ -434,7 +434,7 @@ namespace PS4Saves
                 return;
             }
             
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
@@ -469,19 +469,19 @@ namespace PS4Saves
                 return;
             }
             
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
 
-            if (currentMountPointList.Count == 0)
+            if (_currentMountPointList.Count == 0)
             {
                 SetStatus("No have mounted save on this session");
                 return;
             }
 
-            foreach (var currentMountPoint in currentMountPointList.Values)
+            foreach (var currentMountPoint in _currentMountPointList.Values)
             {
                 SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
                 {
@@ -502,7 +502,7 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
-            if (pid == 0)
+            if (_pid == 0)
             {
                 SetStatus("Don't forget to setup");
                 return;
@@ -512,23 +512,23 @@ namespace PS4Saves
                 SetStatus("No Save Name");
                 return;
             }
-            if (selectedGame == null)
+            if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
-            var pm = ps4.GetProcessMaps(pid);
+            var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
                 SetStatus("RPC Stub Not Found");
                 return;
             }
 
-            var dirNameAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
+            var dirNameAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             var titleIdAddr = dirNameAddr + (uint)Marshal.SizeOf(typeof(SceSaveDataDirName));
             var fingerprintAddr = titleIdAddr + 0x10;
-            ps4.WriteMemory(pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
-            ps4.WriteMemory(pid, titleIdAddr, selectedGame);
+            ps4.WriteMemory(_pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
+            ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
             SceSaveDataDirName dirName = new SceSaveDataDirName
             {
                 data = nameTextBox.Text
@@ -548,9 +548,9 @@ namespace PS4Saves
             {
 
             };
-            ps4.WriteMemory(pid, dirNameAddr, dirName);
+            ps4.WriteMemory(_pid, dirNameAddr, dirName);
             var mp = Mount(mount, mountResult);
-            ps4.FreeMemory(pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
+            ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             if (mp != "")
             {
                 SetStatus("Save Created");
@@ -568,42 +568,42 @@ namespace PS4Saves
 
         private int GetUser()
         {
-            if(user != 0)
+            if(_user != 0)
             {
-                return user;
+                return _user;
             }
             return InitialUser();          
         }
 
         private int InitialUser()
         {
-            var bufferAddrObject = ps4.AllocateMemory(pid, sizeof(int)) as object;
+            var bufferAddrObject = ps4.AllocateMemory(_pid, sizeof(int)) as object;
 
-            ps4.Call(pid, stub, libSceUserServiceBase + offsets.sceUserServiceGetInitialUser, bufferAddrObject);
+            ps4.Call(_pid, _stub, _libSceUserServiceBase + offsets.sceUserServiceGetInitialUser, bufferAddrObject);
 
             var bufferAddr = (ulong) bufferAddrObject;
-            var id = ps4.ReadMemory<int>(pid, bufferAddr);
+            var id = ps4.ReadMemory<int>(_pid, bufferAddr);
 
-            ps4.FreeMemory(pid, bufferAddr, sizeof(int));
+            ps4.FreeMemory(_pid, bufferAddr, sizeof(int));
 
             return id;
         }
 
         private SearchEntry[] Find(SceSaveDataDirNameSearchCond searchCond, SceSaveDataDirNameSearchResult searchResult)
         {
-            var searchCondAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
+            var searchCondAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
             var searchResultAddr = searchCondAddr + (uint)Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond));
 
-            ps4.WriteMemory(pid, searchCondAddr, searchCond);
-            ps4.WriteMemory(pid, searchResultAddr, searchResult);
-            var ret = ps4.Call(pid, stub, libSceSaveDataBase + offsets.sceSaveDataDirNameSearch, searchCondAddr, searchResultAddr);
+            ps4.WriteMemory(_pid, searchCondAddr, searchCond);
+            ps4.WriteMemory(_pid, searchResultAddr, searchResult);
+            var ret = ps4.Call(_pid, _stub, _libSceSaveDataBase + offsets.sceSaveDataDirNameSearch, searchCondAddr, searchResultAddr);
             WriteLog($"sceSaveDataDirNameSearch ret = 0x{ret:X}");
             if ( ret == 0)
             {
-                searchResult = ps4.ReadMemory<SceSaveDataDirNameSearchResult>(pid, searchResultAddr);
+                searchResult = ps4.ReadMemory<SceSaveDataDirNameSearchResult>(_pid, searchResultAddr);
                 SearchEntry[] sEntries = new SearchEntry[searchResult.hitNum];
-                var paramMemory = ps4.ReadMemory(pid, searchResult.param, (int)searchResult.hitNum * Marshal.SizeOf(typeof(SceSaveDataParam)));
-                var dirNamesMemory = ps4.ReadMemory(pid, searchResult.dirNames, (int)searchResult.hitNum * 32);
+                var paramMemory = ps4.ReadMemory(_pid, searchResult.param, (int)searchResult.hitNum * Marshal.SizeOf(typeof(SceSaveDataParam)));
+                var dirNamesMemory = ps4.ReadMemory(_pid, searchResult.dirNames, (int)searchResult.hitNum * 32);
                 for (int i = 0; i < searchResult.hitNum; i++)
                 {
                     SceSaveDataParam tmp = (SceSaveDataParam)PS4DBG.GetObjectFromBytes(PS4DBG.SubArray(paramMemory, i * Marshal.SizeOf(typeof(SceSaveDataParam)), Marshal.SizeOf(typeof(SceSaveDataParam))), typeof(SceSaveDataParam));
@@ -616,11 +616,11 @@ namespace PS4Saves
                         time = new DateTime(1970, 1, 1).ToLocalTime().AddSeconds(tmp.mtime).ToString(),
                     };
                 }
-                ps4.FreeMemory(pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
+                ps4.FreeMemory(_pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
                 return sEntries;
             }
 
-            ps4.FreeMemory(pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
+            ps4.FreeMemory(_pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
 
             return new SearchEntry[0];
 
@@ -628,33 +628,33 @@ namespace PS4Saves
 
         private void Unmount(SceSaveDataMountPoint mountPoint)
         {
-            var mountPointAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataMountPoint)));
+            var mountPointAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataMountPoint)));
 
-            ps4.WriteMemory(pid, mountPointAddr, mountPoint);
-            var ret = ps4.Call(pid, stub, libSceSaveDataBase + offsets.sceSaveDataUmount, mountPointAddr);
+            ps4.WriteMemory(_pid, mountPointAddr, mountPoint);
+            var ret = ps4.Call(_pid, _stub, _libSceSaveDataBase + offsets.sceSaveDataUmount, mountPointAddr);
             WriteLog($"sceSaveDataUmount ret = 0x{ret:X}");
-            ps4.FreeMemory(pid, mountPointAddr, Marshal.SizeOf(typeof(SceSaveDataMountPoint)));
+            ps4.FreeMemory(_pid, mountPointAddr, Marshal.SizeOf(typeof(SceSaveDataMountPoint)));
         }
 
         private string Mount(SceSaveDataMount mount, SceSaveDataMountResult mountResult)
         {
-            var mountAddr = ps4.AllocateMemory(pid, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
+            var mountAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
             var mountResultAddr = mountAddr + (uint)Marshal.SizeOf(typeof(SceSaveDataMount));
-            ps4.WriteMemory(pid, mountAddr, mount);
-            ps4.WriteMemory(pid, mountResultAddr, mountResult);
+            ps4.WriteMemory(_pid, mountAddr, mount);
+            ps4.WriteMemory(_pid, mountResultAddr, mountResult);
 
-            var ret = ps4.Call(pid, stub, libSceSaveDataBase + offsets.sceSaveDataMount, mountAddr, mountResultAddr);
+            var ret = ps4.Call(_pid, _stub, _libSceSaveDataBase + offsets.sceSaveDataMount, mountAddr, mountResultAddr);
             WriteLog($"sceSaveDataMount ret = 0x{ret:X}");
             if (ret == 0)
             {
-                mountResult = ps4.ReadMemory<SceSaveDataMountResult>(pid, mountResultAddr);
+                mountResult = ps4.ReadMemory<SceSaveDataMountResult>(_pid, mountResultAddr);
 
-                ps4.FreeMemory(pid, mountAddr, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
+                ps4.FreeMemory(_pid, mountAddr, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
 
                 return mountResult.mountPoint.data;
             }
 
-            ps4.FreeMemory(pid, mountAddr, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
+            ps4.FreeMemory(_pid, mountAddr, Marshal.SizeOf(typeof(SceSaveDataMount)) + Marshal.SizeOf(typeof(SceSaveDataMountResult)));
 
             return "";
         }
@@ -679,7 +679,7 @@ namespace PS4Saves
             subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).subtitle;
             detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).detail;
             dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).time;
-            if (currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).dirName))
+            if (_currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).dirName))
             {
                 dirsComboBox.BorderColor = Color.LimeGreen;
             }
@@ -687,7 +687,7 @@ namespace PS4Saves
         
         private void userComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            user = ((User)userComboBox.SelectedItem).id;
+            _user = ((User)userComboBox.SelectedItem).id;
         }
 
         class User
@@ -703,34 +703,34 @@ namespace PS4Saves
         private string[] GetSaveDirectories()
         {
             var dirs = new List<string>();
-            var mem = ps4.AllocateMemory(pid, 0x8000);
+            var mem = ps4.AllocateMemory(_pid, 0x8000);
             var path = mem;
             var buffer = mem + 0x101;
 
-            ps4.WriteMemory(pid, path, $"/user/home/{GetUser():x}/savedata/");
-            var ret = (int)ps4.Call(pid, stub, GetSaveDirectoriesAddr, path, buffer);
+            ps4.WriteMemory(_pid, path, $"/user/home/{GetUser():x}/savedata/");
+            var ret = (int)ps4.Call(_pid, _stub, _getSaveDirectoriesAddr, path, buffer);
             if (ret != -1 && ret != 0)
             {
-                var bDirs = ps4.ReadMemory(pid, buffer, ret * 0x10);
+                var bDirs = ps4.ReadMemory(_pid, buffer, ret * 0x10);
                 for (var i = 0; i < ret; i++)
                 {
                     var sDir = System.Text.Encoding.UTF8.GetString(PS4DBG.SubArray(bDirs, i * 10, 9));
                     dirs.Add(sDir);
                 }
             }
-            ps4.FreeMemory(pid, mem, 0x8000);
+            ps4.FreeMemory(_pid, mem, 0x8000);
             return dirs.ToArray();
         }
 
         private User[] GetUsers()
         {
             List<User> users = new List<User>();
-            var mem = ps4.AllocateMemory(pid, 0x1);
-            var ret = (int)ps4.Call(pid, stub, GetUsersAddr, mem);
+            var mem = ps4.AllocateMemory(_pid, 0x1);
+            var ret = (int)ps4.Call(_pid, _stub, _getUsersAddr, mem);
             
             if (ret != -1 && ret != 0)
             {
-                var buffer = ps4.ReadMemory(pid, mem, (21) * 4);
+                var buffer = ps4.ReadMemory(_pid, mem, (21) * 4);
                 for (int i = 0; i < 4; i++)
                 {
                     var id = BitConverter.ToInt32(buffer, 21 * i);
@@ -742,19 +742,15 @@ namespace PS4Saves
                     users.Add(new User { id = id, name = name });
                 }
             }
-            ps4.FreeMemory(pid, mem, 0x1);
+            ps4.FreeMemory(_pid, mem, 0x1);
             return users.ToArray();
 
-        }
-        public static bool checkIP(string IP)
-        {
-            return !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out _);
         }
         private void payloadButton_Click(object sender, EventArgs e)
         {
             try
             {
-                if (!checkIP(ipTextBox.Text))
+                if (!Functions.CheckIp(ipTextBox.Text))
                 {
                     SetStatus("Invalid IP");
                     return;
@@ -790,12 +786,12 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
-            if (pid == 0)
+            if (_pid == 0)
             {
                 SetStatus("Don't forget to press setup");
                 return;
             }
-            var pm = ps4.GetProcessMaps(pid);
+            var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
                 SetStatus("RPC Stub Not Found");
@@ -807,7 +803,7 @@ namespace PS4Saves
 
         private void gamesComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            selectedGame = (string)gamesComboBox.SelectedItem;
+            _selectedGame = (string)gamesComboBox.SelectedItem;
         }
     }
 }
