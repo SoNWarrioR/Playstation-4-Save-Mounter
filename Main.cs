@@ -25,7 +25,7 @@ namespace PS4Saves
         private ulong _stub;
         private ulong _libSceUserServiceBase = 0x0;
         private ulong _libSceSaveDataBase = 0x0;
-        private ulong executableBase = 0x0;
+        private ulong _executableBase = 0x0;
         private ulong _libSceLibcInternalBase = 0x0;
         private ulong _getSaveDirectoriesAddr = 0;
         private ulong _getUsersAddr = 0;
@@ -39,7 +39,7 @@ namespace PS4Saves
         {
             InitializeComponent();
             _currentMountPointList = new Dictionary<string, object>();
-            string[] args = Environment.GetCommandLineArgs();
+            var args = Environment.GetCommandLineArgs();
             if (args.Length == 2 && args[1] == "-log")
             {
                 log = true;
@@ -50,7 +50,8 @@ namespace PS4Saves
                 ipTextBox.Text = File.ReadAllText("ip");
             }
         }
-        public static string FormatSize(double size)
+
+        private static string FormatSize(double size)
         {
             const long bytesInKilobytes = 1024;
             const long bytesInMegabytes = bytesInKilobytes * 1024;
@@ -67,7 +68,8 @@ namespace PS4Saves
                 value = size / bytesInGigabytes;
                 str = "GB";
             }
-            return String.Format("{0:0.##} {1}", value, str);
+            
+            return $"{value:0.##} {str}";
         }
         private void sizeTrackBar_Scroll(object sender, EventArgs e)
         {
@@ -123,7 +125,7 @@ namespace PS4Saves
                     return;
                 }
                 
-                ps4 = new PS4DBG(ipTextBox.Text);
+                ps4 = new PS4DBG(IPAddress.Parse(ipTextBox.Text));
                 ps4.Connect();
                 if (!ps4.IsConnected)
                 {
@@ -137,10 +139,8 @@ namespace PS4Saves
                 }
                 else
                 {
-                    using (var sw = File.CreateText(@"log.txt"))
-                    {
-                        sw.Write(ipTextBox.Text);
-                    }
+                    using var sw = File.CreateText(@"log.txt");
+                    sw.Write(ipTextBox.Text);
                 }
             }
             catch
@@ -190,7 +190,7 @@ namespace PS4Saves
                 return;
             }
             
-            executableBase = (ulong)tmp;
+            _executableBase = (ulong)tmp;
             tmp = pm.FindEntry("libSceLibcInternal.sprx")?.start;
             if (tmp == null)
             {
@@ -224,6 +224,7 @@ namespace PS4Saves
             ps4.WriteMemory(s.pid, ex.start + 0x00070855, new byte[] { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }); // don't even remember doing this
             ps4.WriteMemory(s.pid, ex.start + 0x00070054, new byte[] { 0x90, 0x90}); //nevah jump
             ps4.WriteMemory(s.pid, ex.start + 0x00070260, new byte[] { 0x90, 0xE9 }); //always jump
+            
             //WRITE CUSTOM FUNCTIONS
             _getSaveDirectoriesAddr = ps4.AllocateMemory(_pid, 0x8000);
             ps4.WriteMemory(_pid, _getSaveDirectoriesAddr, Functions.GetSaveDirectories);
@@ -253,22 +254,26 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             if (_pid == 0)
             {
                 SetStatus("dont forget to click setup");
                 return;
             }
+            
             if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
+            
             var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
                 SetStatus("RPC Stub Not Found");
                 return;
             }
+            
             var dirNameAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
             var titleIdAddr = dirNameAddr + (uint) Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024;
             var paramAddr = titleIdAddr + 0x10;
@@ -283,17 +288,13 @@ namespace PS4Saves
                 dirNamesNum = 1024,
                 param = paramAddr,
             };
+            
             ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
             dirsComboBox.DataSource = Find(searchCond, searchResult);
             ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) * 1024 + 0x10 + Marshal.SizeOf(typeof(SceSaveDataParam)) * 1024);
-            if (dirsComboBox.Items.Count > 0)
-            {
-                SetStatus($"Found {dirsComboBox.Items.Count} Save Directories :D");
-            }
-            else
-            {
-                SetStatus("Found 0 Save Directories :(");
-            }
+            SetStatus(dirsComboBox.Items.Count > 0
+                ? $"Found {dirsComboBox.Items.Count} Save Directories :D"
+                : "Found 0 Save Directories :(");
         }
 
         private void mountButton_Click(object sender, EventArgs e)
@@ -303,27 +304,30 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             if (dirsComboBox.Items.Count == 0)
             {
                 SetStatus("No save selected");
                 return;
             }
+            
             if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
+            
             var dirNameAddr = ps4.AllocateMemory(_pid, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             var titleIdAddr = dirNameAddr + (uint)Marshal.SizeOf(typeof(SceSaveDataDirName));
             var fingerprintAddr = titleIdAddr + 0x10;
             ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
             ps4.WriteMemory(_pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
-            SceSaveDataDirName dirName = new SceSaveDataDirName
+            var dirName = new SceSaveDataDirName
             {
                 data = dirsComboBox.Text
             };
 
-            SceSaveDataMount mount = new SceSaveDataMount
+            var mount = new SceSaveDataMount
             {
                 userId = GetUser(),
                 dirName = dirNameAddr,
@@ -333,7 +337,7 @@ namespace PS4Saves
                 fingerprint = fingerprintAddr
 
             };
-            SceSaveDataMountResult mountResult = new SceSaveDataMountResult
+            var mountResult = new SceSaveDataMountResult
             {
 
             };
@@ -343,7 +347,7 @@ namespace PS4Saves
             ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             if (mountPointLocation != "")
             {
-                _currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).dirName, new MountPointStruct()
+                _currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).DirName, new MountPointStruct()
                 {
                     Directory = dirsComboBox.SelectedItem,
                     Title = _selectedGame,
@@ -368,13 +372,14 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             if (_currentMountPointList.Count == 0)
             {
                 SetStatus("No save mounted");
                 return;
             }
 
-            var currentSaveDirectory = ((SearchEntry) dirsComboBox.SelectedItem).dirName;
+            var currentSaveDirectory = ((SearchEntry) dirsComboBox.SelectedItem).DirName;
 
             if (!_currentMountPointList.ContainsKey(currentSaveDirectory))
             {
@@ -383,9 +388,9 @@ namespace PS4Saves
             }
 
             _currentMountPointList.TryGetValue(currentSaveDirectory, out var currentMountPoint);
-            SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
+            var mountPoint = new SceSaveDataMountPoint
             {
-                data = ((MountPointStruct)currentMountPoint).MountPoint,
+                data = ((MountPointStruct)currentMountPoint)?.MountPoint,
             };
 
             Unmount(mountPoint);
@@ -413,10 +418,11 @@ namespace PS4Saves
                 SetStatus("No game selected");
                 return;
             }
-            
-            UnmountAllTypeDialog unmountTypeDialog = new UnmountAllTypeDialog(this);
-            unmountTypeDialog.TopMost = true;
-            unmountTypeDialog.StartPosition = FormStartPosition.CenterParent;
+
+            var unmountTypeDialog = new UnmountAllTypeDialog(this)
+            {
+                StartPosition = FormStartPosition.CenterParent
+            };
             unmountTypeDialog.Show();
         }
 
@@ -440,7 +446,7 @@ namespace PS4Saves
                 return;
             }
             
-            for (var i = 0; i < 18; i++)
+            for (var i = 0; i < 9; i++)
             {
                 
                 SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
@@ -502,21 +508,25 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             if (_pid == 0)
             {
                 SetStatus("Don't forget to setup");
                 return;
             }
+            
             if (nameTextBox.Text == "")
             {
                 SetStatus("No Save Name");
                 return;
             }
+            
             if (_selectedGame == null)
             {
                 SetStatus("No game selected");
                 return;
             }
+            
             var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
@@ -529,7 +539,7 @@ namespace PS4Saves
             var fingerprintAddr = titleIdAddr + 0x10;
             ps4.WriteMemory(_pid, fingerprintAddr, "0000000000000000000000000000000000000000000000000000000000000000");
             ps4.WriteMemory(_pid, titleIdAddr, _selectedGame);
-            SceSaveDataDirName dirName = new SceSaveDataDirName
+            var dirName = new SceSaveDataDirName
             {
                 data = nameTextBox.Text
             };
@@ -549,14 +559,14 @@ namespace PS4Saves
 
             };
             ps4.WriteMemory(_pid, dirNameAddr, dirName);
-            var mp = Mount(mount, mountResult);
+            var tempMountPoint = Mount(mount, mountResult);
             ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
-            if (mp != "")
+            if (tempMountPoint != "")
             {
                 SetStatus("Save Created");
-                SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
+                var mountPoint = new SceSaveDataMountPoint
                 {
-                    data = mp,
+                    data = tempMountPoint,
                 };
                 Unmount(mountPoint);
             }
@@ -568,11 +578,7 @@ namespace PS4Saves
 
         private int GetUser()
         {
-            if(_user != 0)
-            {
-                return _user;
-            }
-            return InitialUser();          
+            return _user != 0 ? _user : InitialUser();
         }
 
         private int InitialUser()
@@ -604,16 +610,16 @@ namespace PS4Saves
                 SearchEntry[] sEntries = new SearchEntry[searchResult.hitNum];
                 var paramMemory = ps4.ReadMemory(_pid, searchResult.param, (int)searchResult.hitNum * Marshal.SizeOf(typeof(SceSaveDataParam)));
                 var dirNamesMemory = ps4.ReadMemory(_pid, searchResult.dirNames, (int)searchResult.hitNum * 32);
-                for (int i = 0; i < searchResult.hitNum; i++)
+                for (var i = 0; i < searchResult.hitNum; i++)
                 {
                     SceSaveDataParam tmp = (SceSaveDataParam)PS4DBG.GetObjectFromBytes(PS4DBG.SubArray(paramMemory, i * Marshal.SizeOf(typeof(SceSaveDataParam)), Marshal.SizeOf(typeof(SceSaveDataParam))), typeof(SceSaveDataParam));
                     sEntries[i] = new SearchEntry
                     {
-                        dirName = System.Text.Encoding.UTF8.GetString(PS4DBG.SubArray(dirNamesMemory, i * 32, 32)),
-                        title = System.Text.Encoding.UTF8.GetString(tmp.title),
-                        subtitle = System.Text.Encoding.UTF8.GetString(tmp.subTitle),
-                        detail = System.Text.Encoding.UTF8.GetString(tmp.detail),
-                        time = new DateTime(1970, 1, 1).ToLocalTime().AddSeconds(tmp.mtime).ToString(),
+                        DirName = System.Text.Encoding.UTF8.GetString(PS4DBG.SubArray(dirNamesMemory, i * 32, 32)),
+                        Title = System.Text.Encoding.UTF8.GetString(tmp.title),
+                        Subtitle = System.Text.Encoding.UTF8.GetString(tmp.subTitle),
+                        Detail = System.Text.Encoding.UTF8.GetString(tmp.detail),
+                        Time = new DateTime(1970, 1, 1).ToLocalTime().AddSeconds(tmp.mtime).ToString(),
                     };
                 }
                 ps4.FreeMemory(_pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
@@ -623,7 +629,6 @@ namespace PS4Saves
             ps4.FreeMemory(_pid, searchCondAddr, Marshal.SizeOf(typeof(SceSaveDataDirNameSearchCond)) + Marshal.SizeOf(typeof(SceSaveDataDirNameSearchResult)));
 
             return new SearchEntry[0];
-
         }
 
         private void Unmount(SceSaveDataMountPoint mountPoint)
@@ -659,27 +664,27 @@ namespace PS4Saves
             return "";
         }
 
-        class SearchEntry
+        private class SearchEntry
         {
-            public string dirName;
-            public string title;
-            public string subtitle;
-            public string detail;
-            public string time;
+            public string DirName;
+            public string Title;
+            public string Subtitle;
+            public string Detail;
+            public string Time;
             public override string ToString()
             {
-                return dirName;
+                return DirName;
             }
         }
 
         private void dirsComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             dirsComboBox.BorderColor = Color.LightGray;
-            titleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).title;
-            subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).subtitle;
-            detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).detail;
-            dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).time;
-            if (_currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).dirName))
+            titleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Title;
+            subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Subtitle;
+            detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Detail;
+            dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Time;
+            if (_currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).DirName))
             {
                 dirsComboBox.BorderColor = Color.LimeGreen;
             }
@@ -687,17 +692,17 @@ namespace PS4Saves
         
         private void userComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _user = ((User)userComboBox.SelectedItem).id;
+            _user = ((User)userComboBox.SelectedItem).Id;
         }
 
-        class User
+        private class User
         {
-            public int id;
-            public string name;
+            public int Id;
+            public string Name;
 
             public override string ToString()
             {
-                return name;
+                return Name;
             }
         }
         private string[] GetSaveDirectories()
@@ -718,7 +723,9 @@ namespace PS4Saves
                     dirs.Add(sDir);
                 }
             }
+            
             ps4.FreeMemory(_pid, mem, 0x8000);
+            
             return dirs.ToArray();
         }
 
@@ -739,12 +746,13 @@ namespace PS4Saves
                         continue;
                     }
                     var name = System.Text.Encoding.UTF8.GetString(PS4DBG.SubArray(buffer, i * 21 + 4, 16));
-                    users.Add(new User { id = id, name = name });
+                    users.Add(new User { Id = id, Name = name });
                 }
             }
+            
             ps4.FreeMemory(_pid, mem, 0x1);
+            
             return users.ToArray();
-
         }
         private void payloadButton_Click(object sender, EventArgs e)
         {
@@ -786,17 +794,20 @@ namespace PS4Saves
                 SetStatus("Not connected to ps4");
                 return;
             }
+            
             if (_pid == 0)
             {
                 SetStatus("Don't forget to press setup");
                 return;
             }
+            
             var pm = ps4.GetProcessMaps(_pid);
             if (pm.FindEntry("(NoName)clienthandler") == null)
             {
                 SetStatus("RPC Stub Not Found");
                 return;
             }
+            
             var dirs = GetSaveDirectories();
             gamesComboBox.DataSource = dirs;
         }
