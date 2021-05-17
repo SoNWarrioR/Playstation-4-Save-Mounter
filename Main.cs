@@ -347,7 +347,7 @@ namespace PS4Saves
             ps4.FreeMemory(_pid, dirNameAddr, Marshal.SizeOf(typeof(SceSaveDataDirName)) + 0x10 + 0x41);
             if (mountPointLocation != "")
             {
-                _currentMountPointList?.Add(((SearchEntry)dirsComboBox.SelectedItem).DirName, new MountPointStruct()
+                _currentMountPointList?.Add($"{_selectedGame}_{((SearchEntry)dirsComboBox.SelectedItem).DirName}", new MountPointStruct()
                 {
                     Directory = dirsComboBox.SelectedItem,
                     Title = _selectedGame,
@@ -381,13 +381,13 @@ namespace PS4Saves
 
             var currentSaveDirectory = ((SearchEntry) dirsComboBox.SelectedItem).DirName;
 
-            if (!_currentMountPointList.ContainsKey(currentSaveDirectory))
+            if (!_currentMountPointList.ContainsKey($"{_selectedGame}_{currentSaveDirectory}"))
             {
                 SetStatus("Current selected save not mounted");
                 return;
             }
 
-            _currentMountPointList.TryGetValue(currentSaveDirectory, out var currentMountPoint);
+            _currentMountPointList.TryGetValue($"{_selectedGame}_{currentSaveDirectory}", out var currentMountPoint);
             var mountPoint = new SceSaveDataMountPoint
             {
                 data = ((MountPointStruct)currentMountPoint)?.MountPoint,
@@ -395,7 +395,7 @@ namespace PS4Saves
 
             Unmount(mountPoint);
             dirsComboBox.BorderColor = Color.LightGray;
-            _currentMountPointList.Remove(currentSaveDirectory);
+            _currentMountPointList.Remove($"{_selectedGame}_{currentSaveDirectory}");
             SetStatus("Save Unmounted");
         }
 
@@ -458,6 +458,7 @@ namespace PS4Saves
             }
             
             dirsComboBox.BorderColor = Color.LightGray;
+            _currentMountPointList.Clear();
             SetStatus("All save unmounted");
         }
 
@@ -487,14 +488,16 @@ namespace PS4Saves
                 return;
             }
 
-            foreach (var currentMountPoint in _currentMountPointList.Values)
+            var saveDictionary = new Dictionary<string, object>(_currentMountPointList);
+            foreach (var currentMountPoint in saveDictionary)
             {
                 SceSaveDataMountPoint mountPoint = new SceSaveDataMountPoint
                 {
-                    data = ((MountPointStruct)currentMountPoint).MountPoint,
+                    data = ((MountPointStruct)currentMountPoint.Value).MountPoint,
                 };
 
                 Unmount(mountPoint);
+                _currentMountPointList.Remove(currentMountPoint.Key);
             }
             
             dirsComboBox.BorderColor = Color.LightGray;
@@ -684,7 +687,7 @@ namespace PS4Saves
             subtitleTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Subtitle;
             detailsTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Detail;
             dateTextBox.Text = ((SearchEntry)dirsComboBox.SelectedItem).Time;
-            if (_currentMountPointList.ContainsKey(((SearchEntry)dirsComboBox.SelectedItem).DirName))
+            if (_currentMountPointList.ContainsKey($"{_selectedGame}_{((SearchEntry)dirsComboBox.SelectedItem).DirName}"))
             {
                 dirsComboBox.BorderColor = Color.LimeGreen;
             }
